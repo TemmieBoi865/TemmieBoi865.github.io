@@ -11,6 +11,12 @@ function drawUI(){
     // Canvas.ctx.fillText(waveTracker.waves, 200,200);
 }
 
+function onClick(){
+    if(rogueLikeManager.shop == true){
+        rogueLikeManager.checkClick();
+    }
+}
+
 function getDistance(target1,target2){
     return Math.sqrt(Math.pow(target2.position.x-target1.position.x,2)+Math.pow(target2.position.y-target1.position.y,2));
 }
@@ -153,6 +159,9 @@ class Enemy{
                     if((bullet.position.x + bullet.size.w/2) >= (this.position.x-this.size.w/2) && (bullet.position.x-bullet.size.w/2) <= (this.position.x+this.size.w/2) && (bullet.position.y + bullet.size.h/2) >= (this.position.y - this.size.h/2) && (bullet.position.y-bullet.size.h/2) <= (this.position.y+this.size.h/2) && bullet.exists && bullet.tags == 'player'){
                         bullet.delete();
                         this.health--;
+                        if(this.health <= 0){
+                            player.money++;
+                        }
                     }
                 }
                 catch{
@@ -315,7 +324,7 @@ class Enemy{
         for(let i = 0; i < enemyTracker.enemiesList.length; i++){
             if(this.id == enemyTracker.enemiesList[i].id){
                 try{
-                    player.money++;
+                    // player.money++;
                     enemyTracker.enemiesList.splice(i,1);
                 }
                 catch{
@@ -572,7 +581,11 @@ class Wave{
         }
     }
     waveOver(){
-        return this.stage >= this.miniWaves.length - 1 && enemyTracker.enemiesAlive == 0;
+        if(this.stage >= this.miniWaves.length - 1 && enemyTracker.enemiesAlive == 0){
+            this.stage = 0;
+            return true;
+        }
+        return false;
     }
 }
 
@@ -585,16 +598,17 @@ class WaveTracker{
     }
     spawnWave(){
         if(this.waveRunning == false){
-            this.waveIndex = Math.floor(Math.random()*this.waves.length);
-            if(this.waveIndex == this.waves.length){
-                this.waveIndex = -1;
-            }
-            this.waveIndex = 0;
+            this.waveIndex = Math.floor(Math.random()*this.waves.length-0.001);
             this.waveRunning = true;
+            this.waveIndex = 0;
         }
-        this.waves[this.waveIndex].spawn();
-        if(this.waves[this.waveIndex].waveOver()){
+        if(this.waveRunning == true && rogueLikeManager.shop == false){
+            this.waves[this.waveIndex].spawn();
+        }
+        if(this.waves[this.waveIndex].waveOver() && rogueLikeManager.shop == false){
             // this.waveRunning = false;
+            rogueLikeManager.shop = true;
+            rogueLikeManager.spawnUpgrades();
         }
     }
 }
@@ -611,19 +625,41 @@ class Upgrade{
 
 class RogueLikeManager{
     constructor(){
-        this.upgrades = [new Upgrade('test1',0)];
+        this.upgrades = [new Upgrade('Speed Boost', 5, function(){player.speed += 3})];
         this.presentedUpgrades = [];
+        this.shop = false;
+    }
+    checkClick(){
+        for(let i = 0; i < 3; i++){
+            if(mouse.position.x >= 250+400*i && mouse.position.x <= 550+400*i && mouse.position.y >= 100 && mouse.position.y <= 400){
+                if(player.money >= this.presentedUpgrades[i].cost){
+                    player.money -= this.presentedUpgrades[i].cost;
+                    this.presentedUpgrades[i].func();
+                }
+            }
+        }
     }
     draw(){
         Canvas.fillRect(400,250,300,400,'rgb(175,175,175)',0);
         Canvas.strokeRect(400,250,300,400,'rgb(175,175,175)',0);
         Canvas.fillText(this.presentedUpgrades[0].name,275,75,200,'#000000');
+        Canvas.fillText(this.presentedUpgrades[0].cost,275,100,200,'#000000');
+
+
         Canvas.fillRect(800,250,300,400,'rgb(175,175,175)',0);
         Canvas.strokeRect(800,250,300,400,'rgb(175,175,175)',0);
         Canvas.fillText(this.presentedUpgrades[1].name,675,75,200,'#000000');
+        Canvas.fillText(this.presentedUpgrades[1].cost,675,100,200,'#000000');
+
+
         Canvas.fillRect(1200,250,300,400,'rgb(175,175,175)',0);
         Canvas.strokeRect(1200,250,300,400,'rgb(175,175,175)',0);
         Canvas.fillText(this.presentedUpgrades[2].name,1075,75,200,'#000000');
+        Canvas.fillText(this.presentedUpgrades[2].cost,1075,100,200,'#000000');
+
+        Canvas.fillRect(1400,800,100,25,'rgb(175,0,0)',0);
+        Canvas.strokeRect(1400,800,100,25,'rgb(175, 175, 175)',0);
+        Canvas.fillText('Exit', 1400, 850, 350, '#000000');
     }
     spawnUpgrades(){
         this.presentedUpgrades = [];
@@ -649,6 +685,7 @@ document.addEventListener('keydown',(event)=>{
 	if(event.key == 'e'){
 		for(let i = 0; i < enemyTracker.enemiesList.length; i++){
             enemyTracker.enemiesList[i].health = -1;
+            player.money++;
         }
 	}
 });
@@ -664,6 +701,9 @@ document.addEventListener('mousemove',(event)=>{
 
 document.addEventListener('mousedown',(event)=>{
     mouse.down = true;
+    mouse.position.x = event.offsetX/window.innerWidth*1600;
+    mouse.position.y = event.offsetY/window.innerHeight*900;
+    onClick();
 });
 
 document.addEventListener('mouseup',(event)=>{
