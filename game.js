@@ -16,14 +16,18 @@ function drawGameScreen(){
 }
 
 async function start(){
-    rogueLikeManager.spawnUpgrades();
+    // rogueLikeManager.spawnUpgrades();
     setInterval(function(){
         Canvas.clear();
-        rogueLikeManager.draw();
+        if(rogueLikeManager.shop == true){
+            rogueLikeManager.draw();
+        }
         drawGameScreen();
     },16.6);
     setInterval(function(){
-        // waveTracker.spawnWave();
+        if(rogueLikeManager.shop == false){
+            waveTracker.spawnWave();
+        }
     },100);
 }
 
@@ -110,7 +114,7 @@ var wave1 = new Wave(
 ],
 [
     'conditional',
-    function(){return enemyTracker.enemiesAlive == 2}
+    function(){return enemyTracker.enemiesAlive <= 2}
 ],
 [
     'delay',
