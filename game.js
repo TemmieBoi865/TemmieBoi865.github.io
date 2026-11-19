@@ -1,18 +1,21 @@
 function drawGameScreen(){
-    playerMovement(player);
-    enemyTracker.simulateAll();
-    enemyTracker.drawAll();
-    player.rotation = getAngle(player,mouse);
-    if(mouse.down || keysDown.has(' ')){
-        player.fireShot();
+    if(player.menu == false){
+        playerMovement(player);
+        enemyTracker.simulateAll();
+        player.rotation = getAngle(player,mouse);
+        if(mouse.down || keysDown.has(' ')){
+            player.fireShot();
+        }
+        bulletTracker.simulateAll();
     }
-    bulletTracker.simulateAll();
-    bulletTracker.drawAll();
+    
     // Canvas.ctx.fillText(bulletTracker.bullets,200,200)
-    drawUI();
+    
+    bulletTracker.drawAll();
+    enemyTracker.drawAll();
     player.move();
     player.draw();
-    bulletTracker.checkAll();
+    drawUI();
 }
 
 async function start(){
@@ -25,21 +28,13 @@ async function start(){
         drawGameScreen();
     },16.6);
     setInterval(function(){
-        if(rogueLikeManager.shop == false){
+        if(rogueLikeManager.shop == false && player.menu == false){
             waveTracker.spawnWave();
         }
     },100);
 }
 
-var test = new Wave(
-[
-    'delay',
-    0,
-    new WaveEnemy(new Position(800,50),new Size(50,50),0,null,1,'shoot down')
-]
-)
-
-var wave2 = new Wave(
+new Wave(
 [
     'repeatDelay',
     125,
@@ -59,7 +54,7 @@ var wave2 = new Wave(
 ]
 )
 
-var wave1 = new Wave(
+new Wave(
 [
     'repeatDelay',
     125,
@@ -100,17 +95,17 @@ var wave1 = new Wave(
     'repeatDelay',
     500,
     5,
-    new WaveEnemy(new Position(800,0),new Size(25,25),0.2,null,3,'slinger')
+    new WaveEnemy(new Position(800,0),new Size(25,25),0.06,null,2,'slinger')
 ],
 [
-    'delay',
-    5000
+    'conditional',
+    function(){return enemyTracker.enemiesAlive <= 10}
 ],
 [
     'repeatDelay',
     125,
     3,
-    new WaveEnemy(new Position(0,0),new Size(50,50),0.2,null,5,'line move','reverse accelerate')
+    new WaveEnemy(new Position(0,0),new Size(50,50),0.2,null,2,'line move','reverse accelerate')
 ],
 [
     'conditional',
@@ -119,17 +114,17 @@ var wave1 = new Wave(
 [
     'delay',
     2000,
-    new WaveEnemy(new Position(0,0),new Size(50,50),0.2,null,7,'slinger'),
+    new WaveEnemy(new Position(0,0),new Size(50,50),0.1,null,5,'slinger'),
     100,
-    new WaveEnemy(new Position(320,0),new Size(50,50),0.2,null,7,'slinger'),
+    new WaveEnemy(new Position(320,0),new Size(50,50),0.1,null,5,'slinger'),
     100,
-    new WaveEnemy(new Position(640,0),new Size(50,50),0.2,null,7,'slinger'),
+    new WaveEnemy(new Position(640,0),new Size(50,50),0.1,null,5,'slinger'),
     100,
-    new WaveEnemy(new Position(960,0),new Size(50,50),0.2,null,7,'slinger'),
+    new WaveEnemy(new Position(960,0),new Size(50,50),0.1,null,5,'slinger'),
     100,
-    new WaveEnemy(new Position(1280,0),new Size(50,50),0.2,null,7,'slinger'),
+    new WaveEnemy(new Position(1280,0),new Size(50,50),0.1,null,5,'slinger'),
     100,
-    new WaveEnemy(new Position(1600,0),new Size(50,50),0.2,null,7,'slinger'),
+    new WaveEnemy(new Position(1600,0),new Size(50,50),0.1,null,5,'slinger'),
     100,
 ],
 [
@@ -145,23 +140,18 @@ var wave1 = new Wave(
     new WaveEnemy(new Position(1600,0),new Size(25,25),15,null,5,'DL curve','no borders','shoot1')
 ],
 [
-    'delay',
-    2000,
-    new WaveEnemy(new Position(100,100),new Size(50,50),0,null,25,'shoot1'),
-    new WaveEnemy(new Position(1500,100),new Size(50,50),0,null,25,'shoot1')
-],
-[
-    'delay',
-    5000,
+    'conditional',
+    function(){return enemyTracker.enemiesAlive <= 1}
 ],
 [
     'repeatDelay',
     250,
-    new WaveEnemy(new Position(100,100),new Size(50,50),0,null,25,'shoot omni','sin x')
+    5,
+    new WaveEnemy(new Position(700,100),new Size(50,50),10,null,25,'shoot omni','sin x')
 ],
 [
     'conditional',
-    function(){return enemyTracker.enemiesAlive == 0}
+    function(){return enemyTracker.enemiesAlive <= 0}
 ],
 [
     'repeatDelay',
@@ -173,7 +163,7 @@ var wave1 = new Wave(
     'repeatDelay',
     100,
     10,
-    new WaveEnemy(new Position(1600,0),new Size(25,25),5,null,5,'DL curve','no borders','shoot omni'),
+    // new WaveEnemy(new Position(1600,0),new Size(25,25),5,null,5,'DL curve','no borders','shoot omni'),
     new WaveEnemy(new Position(1600,0),new Size(25,25),15,null,5,'DL curve','no borders','shoot omni')
 ],
 [
@@ -184,7 +174,7 @@ var wave1 = new Wave(
     'repeatDelay',
     100,
     10,
-    new WaveEnemy(new Position(0,0),new Size(25,25),5,null,5,'DR curve','no borders','shoot omni'),
+    // new WaveEnemy(new Position(0,0),new Size(25,25),5,null,5,'DR curve','no borders','shoot omni'),
     new WaveEnemy(new Position(0,0),new Size(25,25),15,null,5,'DR curve','no borders','shoot omni')
 ],
 [
@@ -195,7 +185,7 @@ var wave1 = new Wave(
     'repeatDelay',
     250,
     5,
-    new WaveEnemy(new Position(1600,0),new Size(25,25),0.2,null,3,'slinger','shoot omni')
+    new WaveEnemy(new Position(1600,0),new Size(25,25),0.1,null,3,'slinger','shoot omni')
 ],
 [
     'conditional',
