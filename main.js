@@ -9,6 +9,16 @@ function drawUI(){
     Canvas.ctx.fillText("Health: " + player.health, 25,37.5);
     Canvas.ctx.fillText("Cash: " + player.money, 25,62.5);
     // Canvas.ctx.fillText(waveTracker.waves, 200,200);
+
+    if(player.menu == true){
+        Canvas.fillRect(800,450,1400,700,'rgb(100,100,100)');
+        Canvas.fillText('Game',750,150,100,'#000000');
+        Canvas.fillText('Player Stats',150,200,500,'#000000');
+        Canvas.fillText('Speed: '+player.speed,150,250,500,'#000000');
+        Canvas.fillText('Damage: '+player.damage,150,275,500,'#000000');
+        Canvas.fillText('Shot CD: '+player.shotCD,150,300,500,'#000000');
+        Canvas.fillText('Bullet Spread: '+player.spread,150,325,500,'#000000');
+    }
 }
 
 function onClick(){
@@ -158,7 +168,7 @@ class Enemy{
                     let bullet = bulletTracker.bullets[i];
                     if((bullet.position.x + bullet.size.w/2) >= (this.position.x-this.size.w/2) && (bullet.position.x-bullet.size.w/2) <= (this.position.x+this.size.w/2) && (bullet.position.y + bullet.size.h/2) >= (this.position.y - this.size.h/2) && (bullet.position.y-bullet.size.h/2) <= (this.position.y+this.size.h/2) && bullet.exists && bullet.tags == 'player'){
                         bullet.delete();
-                        this.health--;
+                        this.health-=player.damage;
                         if(this.health <= 0){
                             player.money++;
                         }
@@ -359,13 +369,17 @@ class Player{
         this.rotation = 0;
 
         this.shotCD = 100;
+        this.spread = 0;
         this.canShoot = true;
+        this.damage = 1;
+
+        this.menu = false;
 
         this.ability = function(){
             player.position.x = mouse.position.x;
             player.position.y = mouse.position.y;
         };
-        this.abilityCD = 1;
+        this.abilityCD = 1000;
         this.canAbility = true;
         this.bulletCount = 0;
         this.health = 10;
@@ -378,7 +392,7 @@ class Player{
             return;
         }
         if(this.canShoot){
-            new Bullet(new Position(this.position.x,this.position.y),25,new Size(50,5),this.rotation,'player');
+            new Bullet(new Position(this.position.x,this.position.y),25,new Size(50,5),this.rotation + (Math.random()-0.5)*this.spread,'player');
             this.canShoot = false;
             await wait(this.shotCD);
             this.canShoot = true;
@@ -391,7 +405,7 @@ class Player{
         if(this.canAbility){
             this.canAbility = false;
             this.ability();
-            await wait(this.abilityCD*1000)
+            await wait(this.abilityCD)
             this.canAbility = true;
         }
     }
@@ -600,13 +614,13 @@ class WaveTracker{
         if(this.waveRunning == false){
             this.waveIndex = Math.floor(Math.random()*this.waves.length-0.001);
             this.waveRunning = true;
-            this.waveIndex = 0;
+            // this.waveIndex = 1;
         }
         if(this.waveRunning == true && rogueLikeManager.shop == false){
             this.waves[this.waveIndex].spawn();
         }
         if(this.waves[this.waveIndex].waveOver() && rogueLikeManager.shop == false){
-            // this.waveRunning = false;
+            this.waveRunning = false;
             rogueLikeManager.shop = true;
             rogueLikeManager.spawnUpgrades();
         }
@@ -614,10 +628,11 @@ class WaveTracker{
 }
 
 class Upgrade{
-    constructor(name,cost,func = function(){}){
+    constructor(name,cost,func = function(){},...description){
         this.name = name;
         this.cost = cost;
         this.func = func;
+        this.description = description;
     }
     buy(){
     }
@@ -625,8 +640,17 @@ class Upgrade{
 
 class RogueLikeManager{
     constructor(){
-        this.upgrades = [new Upgrade('Speed Boost', 5, function(){player.speed += 3})];
+        this.upgrades = [
+            new Upgrade('Speed', 10, function(){player.speed += 1},'Increases Speed By 1'),
+            new Upgrade('Spray Gun',20,function(){player.shotCD -= 10; player.spread += 5},'-10ms Shot CD','+5 Bullet Spread'),
+            new Upgrade('Health',5,function(){player.health += 2},'Increases Health by +2'),
+            new Upgrade('Damage',20,function(){player.damage += 1},'Increases Damage By 1'),
+            new Upgrade('Focus Shot',25,function(){player.damage += 1; player.spread -= 10; if(player.spread < 0){player.spread = 0} player.shotCD += 5},'More Damage, Less Spread','Longer Shot CD')
+        ];
         this.presentedUpgrades = [];
+        this.shop = false;
+    }
+    leaveShop(){
         this.shop = false;
     }
     checkClick(){
@@ -635,31 +659,52 @@ class RogueLikeManager{
                 if(player.money >= this.presentedUpgrades[i].cost){
                     player.money -= this.presentedUpgrades[i].cost;
                     this.presentedUpgrades[i].func();
+                    this.rerollUgrade(i);
                 }
+            }
+        }
+        if(mouse.position.x >= 1425 && mouse.position.x <= 1575 && mouse.position.y >= 825 && mouse.position.y <= 875){
+            this.leaveShop();
+        }
+        if(mouse.position.x >= 25 && mouse.position.x <= 175 && mouse.position.y >= 825 && mouse.position.y <= 875){
+            if(player.money >= 2){
+                this.spawnUpgrades();
+                player.money -= 2;
             }
         }
     }
     draw(){
         Canvas.fillRect(400,250,300,400,'rgb(175,175,175)',0);
-        Canvas.strokeRect(400,250,300,400,'rgb(175,175,175)',0);
+        Canvas.strokeRect(400,250,300,400,'#000000',0);
         Canvas.fillText(this.presentedUpgrades[0].name,275,75,200,'#000000');
-        Canvas.fillText(this.presentedUpgrades[0].cost,275,100,200,'#000000');
-
+        Canvas.fillText(this.presentedUpgrades[0].cost + '$',275,100,200,'#000000');
+        for(let i = 0; i < this.presentedUpgrades[0].description.length; i++){
+            Canvas.fillText(this.presentedUpgrades[0].description[i],275,150+30*i,200,'#000000');
+        }
 
         Canvas.fillRect(800,250,300,400,'rgb(175,175,175)',0);
-        Canvas.strokeRect(800,250,300,400,'rgb(175,175,175)',0);
+        Canvas.strokeRect(800,250,300,400,'#000000',0);
         Canvas.fillText(this.presentedUpgrades[1].name,675,75,200,'#000000');
-        Canvas.fillText(this.presentedUpgrades[1].cost,675,100,200,'#000000');
-
+        Canvas.fillText(this.presentedUpgrades[1].cost + '$',675,100,200,'#000000');
+        for(let i = 0; i < this.presentedUpgrades[1].description.length; i++){
+            Canvas.fillText(this.presentedUpgrades[1].description[i],675,150+30*i,200,'#000000');
+        }
 
         Canvas.fillRect(1200,250,300,400,'rgb(175,175,175)',0);
-        Canvas.strokeRect(1200,250,300,400,'rgb(175,175,175)',0);
+        Canvas.strokeRect(1200,250,300,400,'#000000',0);
         Canvas.fillText(this.presentedUpgrades[2].name,1075,75,200,'#000000');
-        Canvas.fillText(this.presentedUpgrades[2].cost,1075,100,200,'#000000');
+        Canvas.fillText(this.presentedUpgrades[2].cost + '$',1075,100,200,'#000000');
+        for(let i = 0; i < this.presentedUpgrades[2].description.length; i++){
+            Canvas.fillText(this.presentedUpgrades[2].description[i],1075,150+30*i,200,'#000000');
+        }
 
-        Canvas.fillRect(1400,800,100,25,'rgb(175,0,0)',0);
-        Canvas.strokeRect(1400,800,100,25,'rgb(175, 175, 175)',0);
-        Canvas.fillText('Exit', 1400, 850, 350, '#000000');
+        Canvas.fillRect(1500,850,150,50,'rgb(175,0,0)',0);
+        Canvas.strokeRect(1500,850,150,50,'#000000',0);
+        Canvas.fillText('Exit', 1475, 855, 350, '#000000');
+
+        Canvas.fillRect(100,850,150,50,'rgb(0,175,0)',0);
+        Canvas.strokeRect(100,850,150,50,'#000000',0);
+        Canvas.fillText('Reroll -2$', 60, 855, 350, '#000000');
     }
     spawnUpgrades(){
         this.presentedUpgrades = [];
@@ -668,6 +713,9 @@ class RogueLikeManager{
             // f = 0;
             this.presentedUpgrades.push(this.upgrades[f])
         }
+    }
+    rerollUgrade(index){
+        this.presentedUpgrades[index] = this.upgrades[Math.floor(Math.random()*this.upgrades.length-0.001)];
     }
 }
 
@@ -682,12 +730,29 @@ const rogueLikeManager = new RogueLikeManager();
 
 document.addEventListener('keydown',(event)=>{
     keysDown.add(event.key);
+    if(event.key == 'Escape'){
+        player.menu = !player.menu;
+    }
 	if(event.key == 'e'){
-		for(let i = 0; i < enemyTracker.enemiesList.length; i++){
+        if(rogueLikeManager.shop == true){
+            rogueLikeManager.leaveShop();
+        }
+	}
+    if(event.key == 'r'){
+        if(rogueLikeManager.shop == true && player.money >= 2){
+            rogueLikeManager.spawnUpgrades();
+            player.money -= 2;
+        }
+	}
+    if(event.key == '1'){
+        for(let i = 0; i < enemyTracker.enemiesList.length; i++){
             enemyTracker.enemiesList[i].health = -1;
             player.money++;
         }
-	}
+    }
+    if(event.key == 'm'){
+        player.money += 10000;
+    }
 });
 
 document.addEventListener('keyup',(event)=>{
