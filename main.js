@@ -112,6 +112,14 @@ class EnemyTracker{
         this.enemiesAlive = 0;
         this.ids = 0;
     }
+    getById(id){
+        for(let i = 0; i < this.enemiesList.length; i++){
+            if(this.enemiesList[i].id == id){
+                return this.enemiesList[i];
+            }
+        }
+        return null;
+    }
     drawAll(){
         let enemies = this.enemiesList;
         for(let i = 0; i < enemies.length; i++){
@@ -142,7 +150,7 @@ class EnemyTracker{
 }
 
 class Enemy{
-    constructor(position,size,speed,img,health,cash,behavior){
+    constructor(position,size,speed,img,health,cash,startBehavior,behavior){
         this.id = enemyTracker.ids;
         enemyTracker.ids++;
         this.position = position;
@@ -151,14 +159,12 @@ class Enemy{
         this.speed = speed;
         this.velocity = new Vector();
         this.img = img;
-        this.behavior = new Set();
         this.health = health;
         this.cash = cash;
+        this.startBehavior = startBehavior;
         this.time = 0;
         this.alive = true;
-        for(let i = 0; i < behavior.length; i++){
-            this.behavior.add(behavior[i]);
-        }
+        this.behavior = behavior;
         enemyTracker.enemiesList.push(this);
     }
     checkHit(){
@@ -192,145 +198,28 @@ class Enemy{
     }
     draw(){
         if(this.alive){
-            Canvas.fillRect(this.position.x,this.position.y,this.size.w,this.size.h,'#000000',0);
+            if(this.img != null){
+                Canvas.drawImage(this.img,this.position.x,this.position.y,this.size.w,this.size.h);
+            } else {
+                Canvas.fillRect(this.position.x,this.position.y,this.size.w,this.size.h,'#000000',0);
+            }
         }
     }
     move(){
         if(this.alive){
+            if(this.time == 0){
+                this.startBehavior();
+            }
             this.time++;
-            if(this.behavior.has('line move')){
-                this.velocity.normalize(this.speed,getAngle(this,player));
-            }
-            if(this.behavior.has('reverse accelerate')){
-                this.speed = getDistance(this,player)/100;
-            }
-            if(this.behavior.has('funky slinger')){
-                this.speed = this.time%50/100;  
-            }
-            if(this.behavior.has('funky')){
-                this.speed = this.time%50
-            }
-            if(this.behavior.has('slinger')){
-                if(this.position.x > player.position.x){
-                    this.velocity.x -= this.speed;
-                }
-                if(this.position.x < player.position.x){
-                    this.velocity.x += this.speed;
-                }
-                if(this.position.y > player.position.y){
-                    this.velocity.y -= this.speed;
-                }
-                if(this.position.y < player.position.y){
-                    this.velocity.y += this.speed;
-                }
-            }
-            if(this.behavior.has('UL loop')){
-                this.velocity.x = this.speed*Math.sin(this.speed*this.time/(600));
-                this.velocity.y = this.speed*Math.cos(this.speed*this.time/(300));
-            }
-            if(this.behavior.has('UR loop')){
-                this.velocity.x = -this.speed*Math.sin(this.speed*this.time/(600));
-                this.velocity.y = this.speed*Math.cos(this.speed*this.time/(300));
-            }
-            if(this.behavior.has('DR loop')){
-                this.velocity.x = -this.speed*Math.sin(this.speed*this.time/(600));
-                this.velocity.y = -this.speed*Math.cos(this.speed*this.time/(300));
-            }
-            if(this.behavior.has('DL loop')){
-                this.velocity.x = this.speed*Math.sin(this.speed*this.time/(600));
-                this.velocity.y = -this.speed*Math.cos(this.speed*this.time/(300));
-            }
-            if(!this.behavior.has('no borders')){
-                if(this.position.x+this.size.w/2 >= 1600){
-                    this.velocity.x = 0;
-                    this.position.x = 1600-this.size.w/2 - 1
-                }
-                if(this.position.x-this.size.w/2 <= 0){
-                    this.velocity.x = 0;
-                    this.position.x = this.size.w/2 + 1
-                }
-
-                if(this.position.y+this.size.h/2 >= 900){
-                    this.velocity.y = 0;
-                    this.position.y = 900-this.size.h/2 - 1
-                }
-                if(this.position.y-this.size.h/2 <= 0){
-                    this.velocity.y = 0;
-                    this.position.y = this.size.h/2 + 1
-                }
-            }else{
-                if(this.position.x+this.size.w/2 >= 1700){
-                    this.health = 0;
-                }
-                if(this.position.x-this.size.w/2 <= -100){
-                    this.health = 0;
-                }
-
-                if(this.position.y+this.size.h/2 >= 1000){
-                    this.health = 0;
-                }
-                if(this.position.y-this.size.h/2 <= -100){
-                    this.health = 0;
-                }
-            }
-            if(this.behavior.has('shoot player')){
-                if(this.time%100 == 0){
-                    new Bullet(new Position(this.position.x, this.position.y),15,new Size(50,5),getAngle(this,player),'enemy');
-                }
-            }
-            if(this.behavior.has('shoot down') || this.behavior.has('shoot omni')){
-                if(this.time%50 == 0){
-                    new Bullet(new Position(this.position.x, this.position.y),15,new Size(50,5),90,'enemy');
-                }
-            }
-            if(this.behavior.has('shoot right') || this.behavior.has('shoot omni')){
-                if(this.time%50 == 0){
-                    new Bullet(new Position(this.position.x, this.position.y),15,new Size(50,5),0,'enemy');
-                }
-            }
-            if(this.behavior.has('shoot left') || this.behavior.has('shoot omni')){
-                if(this.time%50 == 0){
-                    new Bullet(new Position(this.position.x, this.position.y),15,new Size(50,5),180,'enemy');
-                }
-            }
-            if(this.behavior.has('shoot up') || this.behavior.has('shoot omni')){
-                if(this.time%50 == 0){
-                    new Bullet(new Position(this.position.x, this.position.y),15,new Size(50,5),-90,'enemy');
-                }
-            }
-            if(this.behavior.has('move down')){
-                this.velocity.y = this.speed;
-            }
-            if(this.behavior.has('move up')){
-                this.velocity.y = -this.speed;
-            }
-            if(this.behavior.has('move left')){
-                this.velocity.x = -this.speed;
-            }
-            if(this.behavior.has('move right')){
-                this.velocity.x = this.speed;
-            }
-            if(this.behavior.has('cos x')){
-                this.velocity.x = Math.abs(this.speed)*Math.cos(this.time/this.speed);
-            }
-            if(this.behavior.has('sin y')){
-                this.velocity.y = Math.abs(this.speed)*Math.sin(this.time/this.speed);
-            }
-            if(this.behavior.has('fall down')){
-                this.velocity.y += this.speed/100;
-            }
-            if(this.behavior.has('fall up')){
-                this.velocity.y -= this.speed/100;
-            }
-            if(this.behavior.has('fall right')){
-                this.velocity.x += this.speed/100;
-            }
-            if(this.behavior.has('fall left')){
-                this.velocity.x -= this.speed/100;
-            }
+            
+            this.behavior();
 
             this.position.x += this.velocity.x;
             this.position.y += this.velocity.y;
+
+            if(this.position.x - this.size.w/2 < -100 || this.position.x + this.size.w/2 > 1700 || this.position.y - this.size.h/2 < -100 || this.position.y + this.size.h/2 > 1000){
+                this.delete();
+            }
         }
     }
     delete(){
@@ -349,18 +238,19 @@ class Enemy{
 }
 
 class WaveEnemy{
-    constructor(position,size,speed,img,health,cash,...behavior){
+    constructor(position,size,speed,img,health,cash,startBehavior,behavior){
         this.position = position;
         this.size = size;
         this.speed = speed;
         this.img = img;
-        this.behavior = behavior;
         this.health = health;
         this.cash = cash
+        this.startBehavior = startBehavior;
+        this.behavior = behavior;
         this.alive = true;
     }
     spawn(){
-        new Enemy(new Position(this.position.x,this.position.y),new Size(this.size.w,this.size.h),this.speed,this.img,this.health,this.cash,this.behavior)
+        new Enemy(new Position(this.position.x,this.position.y),new Size(this.size.w,this.size.h),this.speed,this.img,this.health,this.cash,this.startBehavior,this.behavior);
     }
 }
 
@@ -618,7 +508,7 @@ class WaveTracker{
         if(this.waveRunning == false){
             this.waveIndex = Math.floor(Math.random()*this.waves.length-0.001);
             this.waveRunning = true;
-            this.waveIndex = 0;
+            // this.waveIndex = 0;
         }
         if(this.waveRunning == true && rogueLikeManager.shop == false){
             this.waves[this.waveIndex].spawn();
