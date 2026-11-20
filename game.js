@@ -54,12 +54,8 @@ function border(){
 }
 
 class BasicEnemy extends WaveEnemy{
-    constructor(position,size){
-        super(position,size);
-        this.speed = 5;
-        this.img = null;
-        this.health = 5;
-        this.cash = 1;
+    constructor(position,size,health,speed,cash,img){
+        super(position,size,speed,health,cash,img);
         this.startBehavior = function(){};
         this.behavior = function(){
             this.velocity.normalize(this.speed,getAngle(this,player));
@@ -72,12 +68,8 @@ class BasicEnemy extends WaveEnemy{
 }
 
 class Slinger extends WaveEnemy{
-    constructor(position,size){
-        super(position,size);
-        this.speed = 0.1;
-        this.img = null;
-        this.health = 3;
-        this.cash = 1;
+    constructor(position,size,health,speed,cash,img){
+        super(position,size,speed,health,cash,img);
         this.startBehavior = function(){};
         this.behavior = function(){
             if(player.position.x > this.position.x){
@@ -103,12 +95,8 @@ class Slinger extends WaveEnemy{
 }
 
 class Ranger extends WaveEnemy{
-    constructor(position,size){
-        super(position,size);
-        this.speed = 0.1;
-        this.img = null;
-        this.health = 3;
-        this.cash = 1;
+    constructor(position,size,health,speed,cash,img){
+        super(position,size,speed,health,cash,img);
         this.startBehavior = function(){};
         this.behavior = function(){
             if(player.position.x > this.position.x){
@@ -137,18 +125,14 @@ class Ranger extends WaveEnemy{
 }
 
 class Looper extends WaveEnemy{
-    constructor(position,size){
-        super(position,size);
-        this.speed = 10;
-        this.img = null;
-        this.health = 3;
-        this.cash = 1;
+    constructor(position,size,health,speed,cash,img,shoot = true){
+        super(position,size,speed,health,cash,img);
         this.startBehavior = function(){};
         this.behavior = function(){
             this.velocity.x = this.speed * Math.sin(toRad(this.time));
             this.velocity.y = this.speed * Math.cos(toRad(this.time*2));
 
-            if(this.time % 100 == 0){
+            if(this.time % 200 == 0 && shoot == true){
                 new Bullet(new Position(this.position.x,this.position.y),20,new Size(50,5),getAngle(this,player),'enemy');
             }
 
@@ -161,19 +145,45 @@ class Looper extends WaveEnemy{
 }
 
 class Faller extends WaveEnemy{
-    constructor(position,size,direction){
-        super(position,size);
-        this.speed = 10;
-        this.img = null;
-        this.health = 3;
-        this.cash = 1;
+    constructor(position,size,health,speed,cash,img,direction,initialVelocity){
+        super(position,size,speed,health,cash,img);
         this.startBehavior = function(){
+            this.velocity.x = initialVelocity.x;
+            this.velocity.y = initialVelocity.y;
         };
         this.behavior = function(){
             if(direction == 'DL'){
                 this.velocity.x = -this.speed;
                 this.velocity.y += this.speed/100
             }
+            if(direction == 'DR'){
+                this.velocity.x = this.speed;
+                this.velocity.y += this.speed/100
+            }
+            if(direction == 'UL'){
+                this.velocity.y = -this.speed;
+                this.velocity.x += this.speed/100
+            }
+            if(direction == 'UR'){
+                this.velocity.y = this.speed;
+                this.velocity.x += this.speed/100
+            }
+        }
+    }
+    spawn(){
+        super.spawn();
+    }
+}
+
+class FallingHazard extends WaveEnemy{
+    constructor(position,size,health,speed,cash,img,direction,initialVelocity){
+        super(position,size,speed,health,cash,img);
+        this.startBehavior = function(){
+            this.velocity.x = initialVelocity.x;
+            this.velocity.y = initialVelocity.y;
+        };
+        this.behavior = function(){
+            this.velocity.y += this.speed/100
         }
     }
     spawn(){
@@ -190,17 +200,13 @@ new Wave(
     [
         'repeatDelay',
         10,
-        100,
-        new Looper(new Position(200,0),new Size(50,50))
-    ],
-    [
-        'conditional',
-        function(){return enemyTracker.enemiesAlive <= 100}
-    ],
-    [
-        'repeatDelay',
-        250,
-        10,
-        new Faller(new Position(1600,0),new Size(50,50),'DL',new Vector(0,0))
+        25,
+        new Looper(new Position(200,0),new Size(50,50),10,10,1,null,true),
+        // 10,
+        // new Looper(new Position(200,0),new Size(50,50),5,10,1,null,false),
+        // 10,
+        // new Looper(new Position(200,0),new Size(50,50),5,10,1,null,false),
+        // 10,
+        // new Looper(new Position(200,0),new Size(50,50),5,10,1,null,false),
     ]
 )
