@@ -54,8 +54,8 @@ function border(){
 }
 
 class BasicEnemy extends WaveEnemy{
-    constructor(position,size,health,speed,cash,img){
-        super(position,size,speed,health,cash,img);
+    constructor(position,size,speed,img,health,cash){
+        super(position,size,speed,img,health,cash);
         this.startBehavior = function(){};
         this.behavior = function(){
             this.velocity.normalize(this.speed,getAngle(this,player));
@@ -67,77 +67,18 @@ class BasicEnemy extends WaveEnemy{
     }
 }
 
-class Slinger extends WaveEnemy{
-    constructor(position,size,health,speed,cash,img){
-        super(position,size,speed,health,cash,img);
-        this.startBehavior = function(){};
-        this.behavior = function(){
-            if(player.position.x > this.position.x){
-                this.velocity.x += this.speed;
-            }
-            else if(player.position.x < this.position.x){
-                this.velocity.x -= this.speed;
-            }
-            if(player.position.y > this.position.y){
-                this.velocity.y += this.speed;
-            }
-            else if(player.position.y < this.position.y){
-                this.velocity.y -= this.speed;
-            }
-
-            border.call(this);
-
-        };
-    }
-    spawn(){
-        super.spawn();
-    }
-}
-
-class Ranger extends WaveEnemy{
-    constructor(position,size,health,speed,cash,img){
-        super(position,size,speed,health,cash,img);
-        this.startBehavior = function(){};
-        this.behavior = function(){
-            if(player.position.x > this.position.x){
-                this.velocity.x += this.speed;
-            }
-            else if(player.position.x < this.position.x){
-                this.velocity.x -= this.speed;
-            }
-            if(player.position.y > this.position.y){
-                this.velocity.y += this.speed;
-            }
-            else if(player.position.y < this.position.y){
-                this.velocity.y -= this.speed;
-            }
-
-            if(this.time % 50 == 0){
-                new Bullet(new Position(this.position.x,this.position.y),20,new Size(50,5),getAngle(this,player),'enemy');
-            }
-
-            border.call(this);
-        }
-    }
-    spawn(){
-        super.spawn();
-    }
-}
-
 class Looper extends WaveEnemy{
-    constructor(position,size,health,speed,cash,img,shoot = true){
-        super(position,size,speed,health,cash,img);
+    constructor(position,size,speed,img,health,cash,shoot=true){
+        super(position,size,speed,img,health,cash);
         this.startBehavior = function(){};
         this.behavior = function(){
-            this.velocity.x = this.speed * Math.sin(toRad(this.time));
-            this.velocity.y = this.speed * Math.cos(toRad(this.time*2));
-
-            if(this.time % 200 == 0 && shoot == true){
+            this.velocity.x = this.speed*Math.sin(this.time/(4*this.speed));
+            this.velocity.y = this.speed*Math.cos(this.time/(2*this.speed));
+            if(this.time%200 == 0 && shoot){
                 new Bullet(new Position(this.position.x,this.position.y),20,new Size(50,5),getAngle(this,player),'enemy');
             }
-
             border.call(this);
-        }
+        };
     }
     spawn(){
         super.spawn();
@@ -145,46 +86,45 @@ class Looper extends WaveEnemy{
 }
 
 class Faller extends WaveEnemy{
-    constructor(position,size,health,speed,cash,img,direction,initialVelocity){
-        super(position,size,speed,health,cash,img);
+    constructor(position,size,speed,img,health,cash,direction,initVelocity,shoot=false){
+        super(position,size,speed,img,health,cash);
+        this.counts = false;
         this.startBehavior = function(){
-            this.velocity.x = initialVelocity.x;
-            this.velocity.y = initialVelocity.y;
+            this.velocity.y = initVelocity.y;
+            this.velocity.x = initVelocity.x;
         };
-        this.behavior = function(){
-            if(direction == 'DL'){
-                this.velocity.x = -this.speed;
-                this.velocity.y += this.speed/100
+        this.behavior = function(){            
+            if(direction == 'down'){
+                this.velocity.y += this.speed;
             }
-            if(direction == 'DR'){
-                this.velocity.x = this.speed;
-                this.velocity.y += this.speed/100
+            if(direction == 'up'){
+                this.velocity.y -= this.speed;
             }
-            if(direction == 'UL'){
-                this.velocity.y = -this.speed;
-                this.velocity.x += this.speed/100
-            }
-            if(direction == 'UR'){
-                this.velocity.y = this.speed;
-                this.velocity.x += this.speed/100
-            }
-        }
+        };
     }
     spawn(){
         super.spawn();
     }
 }
 
-class FallingHazard extends WaveEnemy{
-    constructor(position,size,health,speed,cash,img,direction,initialVelocity){
-        super(position,size,speed,health,cash,img);
-        this.startBehavior = function(){
-            this.velocity.x = initialVelocity.x;
-            this.velocity.y = initialVelocity.y;
-        };
+class Slinger extends WaveEnemy{
+    constructor(position,size,speed,img,health,cash){
+        super(position,size,speed,img,health,cash);
+        this.startBehavior = function(){};
         this.behavior = function(){
-            this.velocity.y += this.speed/100
-        }
+            if(this.position.x > player.position.x){
+                this.velocity.x -= this.speed;
+            }else{
+                this.velocity.x += this.speed;
+            }
+            if(this.position.y > player.position.y){
+                this.velocity.y -= this.speed;
+            }else{
+                this.velocity.y += this.speed;
+            }
+
+            border.call(this);
+        };
     }
     spawn(){
         super.spawn();
@@ -198,15 +138,68 @@ new Wave(
         1000,
     ],
     [
-        'repeatDelay',
+        'repeatDelayContinue',
         10,
-        25,
-        new Looper(new Position(200,0),new Size(50,50),10,10,1,null,true),
-        // 10,
-        // new Looper(new Position(200,0),new Size(50,50),5,10,1,null,false),
-        // 10,
-        // new Looper(new Position(200,0),new Size(50,50),5,10,1,null,false),
-        // 10,
-        // new Looper(new Position(200,0),new Size(50,50),5,10,1,null,false),
-    ]
+        20,
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,true),
+        10,
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false),
+        10,
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false),
+        10,
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false),
+        10,
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false),
+    ],
+    [
+        'repeatDelayContinue',
+        3000,
+        9999,
+        new Faller(new Position(1600,900),new Size(50,50),0.5,null,5,1,'down',new Vector(-15,-25),false),
+        new Faller(new Position(0,900),new Size(50,50),0.5,null,5,1,'down',new Vector(15,-25),false)
+    ],
+    [
+        'delay',
+        2000
+    ],
+    [
+        'conditional',
+        function(){return enemyTracker.enemiesAlive <= 90}
+    ],
+    [
+        'repeatDelayContinue',
+        250,
+        5,
+        new Slinger(new Position(800,0),new Size(25,25),0.2,null,3,1)
+    ],
+    [
+        'conditional',
+        function(){return enemyTracker.enemiesAlive <= 75}
+    ],
+    [
+        'repeatDelayContinue',
+        2000,
+        1000,
+        new Faller(new Position(400,0),new Size(50,50),0.5,null,200,50,'down',new Vector(0,0),false),
+        100,
+        new Faller(new Position(800,0),new Size(50,50),0.5,null,200,50,'down',new Vector(0,0),false),
+        100,
+        new Faller(new Position(1200,0),new Size(50,50),0.5,null,200,50,'down',new Vector(0,0),false)
+    ],
+    [
+        'conditional',
+        function(){return enemyTracker.enemiesAlive <= 50}
+    ],
+    [
+        'repeatDelayContinue',
+        2000,
+        1000,
+        new Faller(new Position(320,900),new Size(50,50),0.5,null,200,50,'down',new Vector(0,-20),false),
+        100,
+        new Faller(new Position(640,900),new Size(50,50),0.5,null,200,50,'down',new Vector(0,-20),false),
+        100,
+        new Faller(new Position(960,900),new Size(50,50),0.5,null,200,50,'down',new Vector(0,-20),false),
+        100,
+        new Faller(new Position(1280,900),new Size(50,50),0.5,null,200,50,'down',new Vector(0,-20),false),
+    ],
 )
