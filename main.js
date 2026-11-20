@@ -138,7 +138,7 @@ class EnemyTracker{
             try{
                 enemies[i].checkHit();
                 enemies[i].move();
-                if(enemies[i].alive){
+                if(enemies[i].alive && enemies[i].counts){
                     this.enemiesAlive++;
                 }
             }
@@ -150,7 +150,7 @@ class EnemyTracker{
 }
 
 class Enemy{
-    constructor(position,size,speed,img,health,cash,startBehavior,behavior){
+    constructor(position,size,speed,img,health,cash,startBehavior,behavior,counts){
         this.id = enemyTracker.ids;
         enemyTracker.ids++;
         this.position = position;
@@ -165,6 +165,7 @@ class Enemy{
         this.time = 0;
         this.alive = true;
         this.behavior = behavior;
+        this.counts = counts;
         enemyTracker.enemiesList.push(this);
     }
     checkHit(){
@@ -238,19 +239,20 @@ class Enemy{
 }
 
 class WaveEnemy{
-    constructor(position,size,speed,img,health,cash,startBehavior,behavior){
+    constructor(position,size,speed,img,health,cash,startBehavior,behavior,counts=true){
         this.position = position;
         this.size = size;
         this.speed = speed;
         this.img = img;
         this.health = health;
-        this.cash = cash
+        this.cash = cash;
         this.startBehavior = startBehavior;
         this.behavior = behavior;
+        this.counts = counts;
         this.alive = true;
     }
     spawn(){
-        new Enemy(new Position(this.position.x,this.position.y),new Size(this.size.w,this.size.h),this.speed,this.img,this.health,this.cash,this.startBehavior,this.behavior);
+        new Enemy(new Position(this.position.x,this.position.y),new Size(this.size.w,this.size.h),this.speed,this.img,this.health,this.cash,this.startBehavior,this.behavior,this.counts);
     }
 }
 
@@ -424,7 +426,7 @@ class Wave{
         waveTracker.waves.push(this);
     }
     async spawn(){
-        if(this.stage >= this.miniWaves.length-1 || this.spawning){
+        if(this.stage >= this.miniWaves.length-1 || this.spawning || rogueLikeManager.shot == true){
             return;
         }
         let wave = this.miniWaves[this.stage];
@@ -455,23 +457,6 @@ class Wave{
             this.stage++;
         }
 
-        if(wave[0] == 'repeatConditional'){
-            if(wave[1]()){
-                this.repeat++;
-                for(let i1 = 3; i1 < wave.length; i1++){
-                    wave[i1].spawn();
-                    if(typeof(wave[i1]) == 'number'){
-                        await wait(wave[i1]);
-                        continue;
-                    }
-                }
-            }
-            if(this.repeat == wave[2]){
-                this.stage++;
-                this.repeat = 0;
-            }
-        }
-
         if(wave[0] == 'repeatDelay'){
             this.spawning = true;
             for(let i2 = 0; i2 < wave[2]; i2++){
@@ -481,11 +466,33 @@ class Wave{
                         await wait(wave[i1]);
                         continue;
                     }
+                    if(rogueLikeManager.shop == true){
+                        return;
+                    }
                     wave[i1].spawn();
                 }
             }
             this.spawning = false;
             this.stage++;
+        }
+
+        if(wave[0] == 'repeatDelayContinue'){
+            // this.spawning = true;
+            this.stage++;
+            for(let i2 = 0; i2 < wave[2]; i2++){
+                await wait(wave[1])
+                for(let i1 = 3; i1 < wave.length; i1++){
+                    if(typeof(wave[i1]) == 'number'){
+                        await wait(wave[i1]);
+                        continue;
+                    }
+                    if(rogueLikeManager.shop == true){
+                        return;
+                    }
+                    wave[i1].spawn();
+                }
+            }
+            // this.spawning = false;
         }
     }
     waveOver(){
