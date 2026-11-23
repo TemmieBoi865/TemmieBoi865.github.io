@@ -25,6 +25,7 @@ async function start(){
         if(rogueLikeManager.shop == true){
             rogueLikeManager.draw();
         }
+        warningTracker.drawAll();
         drawGameScreen();
     },16.6);
     setInterval(function(){
@@ -56,6 +57,7 @@ function border(){
 class BasicEnemy extends WaveEnemy{
     constructor(position,size,speed,img,health,cash){
         super(position,size,speed,img,health,cash);
+        this.counts = true;
         this.startBehavior = function(){};
         this.behavior = function(){
             this.velocity.normalize(this.speed,getAngle(this,player));
@@ -68,17 +70,18 @@ class BasicEnemy extends WaveEnemy{
 }
 
 class Looper extends WaveEnemy{
-    constructor(position,size,speed,img,health,cash,shoot=true){
-        super(position,size,speed,img,health,cash);
+    constructor(position,size,speed,img,health,cash,warning,shoot=true){
+        super(position,size,speed,img,health,cash,warning);
         this.startBehavior = function(){};
         this.behavior = function(){
             this.velocity.x = this.speed*Math.sin(this.time/(4*this.speed));
             this.velocity.y = this.speed*Math.cos(this.time/(2*this.speed));
             if(this.time%200 == 0 && shoot){
-                new Bullet(new Position(this.position.x,this.position.y),20,new Size(50,5),getAngle(this,player),'enemy');
+                new Bullet(new Position(this.position.x,this.position.y),20,new Size(50,5),90,'enemy');
             }
             border.call(this);
         };
+        this.counts = true;
     }
     spawn(){
         super.spawn();
@@ -131,8 +134,15 @@ class Slinger extends WaveEnemy{
     }
 }
 
-
 new Wave(
+    [
+        'delay',
+        1000,
+        new BasicEnemy(new Position(800,0),new Size(50,50),5,null,5,1),
+    ]
+)
+
+new BossWave(
     [
         'delay',
         1000,
@@ -141,15 +151,15 @@ new Wave(
         'repeatDelayContinue',
         10,
         20,
-        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,true),
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false,true),
         10,
-        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false),
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false,false),
         10,
-        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false),
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false,false),
         10,
-        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false),
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false,false),
         10,
-        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false),
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false,false),
     ],
     [
         'repeatDelayContinue',
@@ -164,27 +174,21 @@ new Wave(
     ],
     [
         'conditional',
-        function(){return enemyTracker.enemiesAlive <= 90}
-    ],
-    [
-        'repeatDelayContinue',
-        250,
-        5,
-        new Slinger(new Position(800,0),new Size(25,25),0.2,null,3,1)
-    ],
-    [
-        'conditional',
         function(){return enemyTracker.enemiesAlive <= 75}
     ],
     [
         'repeatDelayContinue',
         2000,
         1000,
+        new Faller(new Position(0,0),new Size(50,50),0.5,null,200,50,'down',new Vector(0,0),false),
+        100,
         new Faller(new Position(400,0),new Size(50,50),0.5,null,200,50,'down',new Vector(0,0),false),
         100,
         new Faller(new Position(800,0),new Size(50,50),0.5,null,200,50,'down',new Vector(0,0),false),
         100,
-        new Faller(new Position(1200,0),new Size(50,50),0.5,null,200,50,'down',new Vector(0,0),false)
+        new Faller(new Position(1200,0),new Size(50,50),0.5,null,200,50,'down',new Vector(0,0),false),
+        100,
+        new Faller(new Position(1600,0),new Size(50,50),0.5,null,200,50,'down',new Vector(0,0),false)
     ],
     [
         'conditional',
