@@ -35,24 +35,24 @@ function playerMovement(player){
     if(keysDown.has('f')){
         player.doAbility();
     }
-    if(keysDown.has('ArrowUp') || keysDown.has('w')){
+    if(keysDown.has('w')){
         player.velocity.y = -player.speed;
-        if(keysDown.has('ArrowRight') || keysDown.has('d')){
+        if(keysDown.has('d')){
             player.velocity.normalize(player.speed,-45);
             return;
         }
-        if(keysDown.has('ArrowLeft' || keysDown.has('a'))){
+        if(keysDown.has('a')){
             player.velocity.normalize(player.speed,-135);
             return;
         }
     }
-    else if(keysDown.has('ArrowDown') || keysDown.has('s')){
+    else if(keysDown.has('s')){
         player.velocity.y = player.speed;
-        if(keysDown.has('ArrowRight') || keysDown.has('d')){
+        if(keysDown.has('d')){
             player.velocity.normalize(player.speed,45);
             return;
         }
-        if(keysDown.has('ArrowLeft') || keysDown.has('a')){
+        if(keysDown.has('a')){
             player.velocity.normalize(player.speed,135);
             return;
         }
@@ -61,14 +61,40 @@ function playerMovement(player){
         player.velocity.y = 0;
     }
 
-    if(keysDown.has('ArrowRight') || keysDown.has('d')){
+    if(keysDown.has('d')){
         player.velocity.x = player.speed;
     }
-    else if(keysDown.has('ArrowLeft') || keysDown.has('a')){
+    else if(keysDown.has('a')){
         player.velocity.x = -player.speed;
     }
     else{
         player.velocity.x = 0;
+    }
+
+    if(keysDown.has('ArrowUp')){
+        player.fireShot();
+        mouse.position = new Position(player.position.x,player.position.y-9999999);
+        if(keysDown.has('ArrowRight')){
+            mouse.position = new Position(player.position.x+9999999,player.position.y-9999999);
+        }else if(keysDown.has('ArrowLeft')){
+            mouse.position = new Position(player.position.x-9999999,player.position.y-9999999);
+        }
+    }else if(keysDown.has('ArrowDown')){
+        player.fireShot();
+        mouse.position = new Position(player.position.x,player.position.y+9999999);
+        if(keysDown.has('ArrowRight')){
+            mouse.position = new Position(player.position.x+9999999,player.position.y+9999999);
+        }else if(keysDown.has('ArrowLeft')){
+            mouse.position = new Position(player.position.x-9999999,player.position.y+9999999);
+        }
+    }else{
+        if(keysDown.has('ArrowRight')){
+            player.fireShot();
+            mouse.position = new Position(player.position.x+9999999,player.position.y);
+        }else if(keysDown.has('ArrowLeft')){
+            player.fireShot();
+            mouse.position = new Position(player.position.x-9999999,player.position.y);
+        }
     }
 }
 
@@ -251,7 +277,9 @@ class WaveEnemy{
         this.counts = counts;
         this.alive = true;
     }
-    spawn(){
+    async spawn(){
+        new Warning(new Position(this.position.x,this.position.y),new Size(100,100)).spawn();
+        await wait(500);
         new Enemy(new Position(this.position.x,this.position.y),new Size(this.size.w,this.size.h),this.speed,this.img,this.health,this.cash,this.startBehavior,this.behavior,this.counts);
     }
 }
@@ -453,6 +481,101 @@ class Wave{
                 }
                 wave[i1].spawn();
             }
+            await wait(1000);
+            this.spawning = false;
+            this.stage++;
+        }
+
+        if(wave[0] == 'repeatDelay'){
+            this.spawning = true;
+            for(let i2 = 0; i2 < wave[2]; i2++){
+                await wait(wave[1])
+                for(let i1 = 3; i1 < wave.length; i1++){
+                    if(typeof(wave[i1]) == 'number'){
+                        await wait(wave[i1]);
+                        continue;
+                    }
+                    if(rogueLikeManager.shop == true){
+                        return;
+                    }
+                    wave[i1].spawn();
+                }
+            }
+            await wait(1000);
+            this.spawning = false;
+            this.stage++;
+        }
+
+        if(wave[0] == 'repeatDelayContinue'){
+            // this.spawning = true;
+            this.stage++;
+            for(let i2 = 0; i2 < wave[2]; i2++){
+                await wait(wave[1])
+                for(let i1 = 3; i1 < wave.length; i1++){
+                    if(typeof(wave[i1]) == 'number' || player.menu == true){
+                        await wait(wave[i1]);
+                        continue;
+                    }
+                    if(rogueLikeManager.shop == true){
+                        return;
+                    }
+                    wave[i1].spawn();
+                }
+            }
+            // this.spawning = false;
+        }
+
+        if(wave[0] == 'conditionalContinue'){
+            this.stage++;
+            
+        }
+    }
+    waveOver(){
+        if(this.stage >= this.miniWaves.length - 1 && enemyTracker.enemiesAlive == 0){
+            this.stage = 0;
+            return true;
+        }
+        return false;
+    }
+}
+
+class BossWave{
+    constructor(...miniWave){
+        this.miniWaves = miniWave;
+        this.miniWaves.push(['conditional',5000,function(){return enemyTracker.enemiesAlive == 0}])
+        this.stage = 0;
+        this.spawning = false;
+        this.repeat = 0;
+        waveTracker.bossWaves.push(this);
+    }
+    async spawn(){
+        if(this.stage >= this.miniWaves.length-1 || this.spawning || rogueLikeManager.shot == true){
+            return;
+        }
+        let wave = this.miniWaves[this.stage];
+        if(wave[0] == 'conditional'){
+            if(wave[1]()){
+                this.stage++;
+                for(let i1 = 2; i1 < wave.length; i1++){
+                    if(typeof(wave[i1]) == 'number'){
+                        await wait(wave[i1]);
+                        continue;
+                    }
+                    wave[i1].spawn();
+                }
+            }
+        }
+
+        if(wave[0] == 'delay'){
+            this.spawning = true;
+            await wait(wave[1])
+            for(let i1 = 2; i1 < wave.length; i1++){
+                if(typeof(wave[i1]) == 'number'){
+                    await wait(wave[i1]);
+                    continue;
+                }
+                wave[i1].spawn();
+            }
             this.spawning = false;
             this.stage++;
         }
@@ -482,7 +605,7 @@ class Wave{
             for(let i2 = 0; i2 < wave[2]; i2++){
                 await wait(wave[1])
                 for(let i1 = 3; i1 < wave.length; i1++){
-                    if(typeof(wave[i1]) == 'number'){
+                    if(typeof(wave[i1]) == 'number' || player.menu == true){
                         await wait(wave[i1]);
                         continue;
                     }
@@ -493,6 +616,11 @@ class Wave{
                 }
             }
             // this.spawning = false;
+        }
+
+        if(wave[0] == 'conditionalContinue'){
+            this.stage++;
+            
         }
     }
     waveOver(){
@@ -506,21 +634,31 @@ class Wave{
 
 class WaveTracker{
     constructor(){
+        this.wave = 0;
+        this.bossWaves = [];
         this.waves = [];
+        this.currentWave
         this.waveRunning = false;
         this.waveIndex = null;
         this.loop = null;
     }
     spawnWave(){
         if(this.waveRunning == false){
-            this.waveIndex = Math.floor(Math.random()*this.waves.length-0.001);
-            this.waveRunning = true;
-            // this.waveIndex = 0;
+            this.wave++;
+            if(this.wave%10 != 0){
+                this.waveIndex = Math.floor(Math.random()*this.waves.length-0.001);
+                this.waveIndex = 0;
+                this.currentWave = this.waves[this.waveIndex];
+                this.waveRunning = true;
+            }else{
+                this.currentWave = this.bossWaves[Math.floor(Math.random()*this.bossWaves.length-0.0001)];
+                this.waveRunning = true;
+            }
         }
         if(this.waveRunning == true && rogueLikeManager.shop == false){
-            this.waves[this.waveIndex].spawn();
+            this.currentWave.spawn();
         }
-        if(this.waves[this.waveIndex].waveOver() && rogueLikeManager.shop == false){
+        if(this.currentWave.waveOver() && rogueLikeManager.shop == false){
             this.waveRunning = false;
             rogueLikeManager.shop = true;
             rogueLikeManager.spawnUpgrades();
@@ -625,6 +763,38 @@ class RogueLikeManager{
     }
 }
 
+class Warning{
+    constructor(position,size=new Size(50,50)){
+        this.position = position;
+        this.size = size;
+        this.count = 0;
+    }
+    spawn(){
+        warningTracker.warnings.push(this);
+    }
+    draw(){
+        Canvas.fillRect(this.position.x,this.position.y,this.size.w,this.size.h,'red');
+    }
+}
+
+class WarningTracker{
+    constructor(){
+        this.warnings = [];
+    }
+    drawAll(){
+        for(let i = 0; i < this.warnings.length; i++){
+            this.warnings[i].count++;
+            if(this.warnings[i].count%4 <= 1){
+                this.warnings[i].draw();
+            }
+            if(this.warnings[i].count >= 25){
+                this.warnings.splice(i,1);
+            }
+        }
+    }
+}
+
+const warningTracker = new WarningTracker();
 const keysDown = new Set();
 const mouse = new Mouse();
 const bulletTracker = new BulletTracker();
