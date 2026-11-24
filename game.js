@@ -26,6 +26,7 @@ async function start(){
             rogueLikeManager.draw();
         }
         warningTracker.drawAll();
+        // Canvas.fillTesxt(,200,200,99900,'black');
         drawGameScreen();
     },16.6);
     setInterval(function(){
@@ -55,9 +56,9 @@ function border(){
 }
 
 class BasicEnemy extends WaveEnemy{
-    constructor(position,size,speed,img,health,cash){
+    constructor(position,size,speed,img,health,cash,counts=true){
         super(position,size,speed,img,health,cash);
-        this.counts = true;
+        this.counts = counts;
         this.startBehavior = function(){};
         this.behavior = function(){
             this.velocity.normalize(this.speed,getAngle(this,player));
@@ -69,19 +70,41 @@ class BasicEnemy extends WaveEnemy{
     }
 }
 
+class Swinger extends WaveEnemy{
+    constructor(position,size,speed,img,health,cash,direction,initVelocity,counts=true){
+        super(position,size,speed,img,health,cash);
+        this.counts = counts;
+        this.startBehavior = function(){
+            this.velocity.y = initVelocity.y;
+            this.velocity.x = initVelocity.x;
+        };
+        this.behavior = function(){            
+            if(direction == 'x'){
+                this.velocity.x = this.speed * Math.sin(this.time/this.speed);
+            }
+            if(direction == 'y'){
+                this.velocity.y = this.speed * Math.sin(this.time/this.speed);
+            }
+        };
+    }
+    spawn(){
+        super.spawn();
+    }
+}
+
 class Looper extends WaveEnemy{
-    constructor(position,size,speed,img,health,cash,warning,shoot=true){
-        super(position,size,speed,img,health,cash,warning);
+    constructor(position,size,speed,img,health,cash,counts=true,shoot=true){
+        super(position,size,speed,img,health,cash);
+        this.counts = counts;
         this.startBehavior = function(){};
         this.behavior = function(){
             this.velocity.x = this.speed*Math.sin(this.time/(4*this.speed));
             this.velocity.y = this.speed*Math.cos(this.time/(2*this.speed));
             if(this.time%200 == 0 && shoot){
-                new Bullet(new Position(this.position.x,this.position.y),20,new Size(50,5),90,'enemy');
+                new Bullet(new Position(this.position.x,this.position.y),10,new Size(50,5),getAngle(this,player),'enemy');
             }
             border.call(this);
         };
-        this.counts = true;
     }
     spawn(){
         super.spawn();
@@ -89,9 +112,9 @@ class Looper extends WaveEnemy{
 }
 
 class Faller extends WaveEnemy{
-    constructor(position,size,speed,img,health,cash,direction,initVelocity,shoot=false){
+    constructor(position,size,speed,img,health,cash,direction,initVelocity,counts=false){
         super(position,size,speed,img,health,cash);
-        this.counts = false;
+        this.counts = counts;
         this.startBehavior = function(){
             this.velocity.y = initVelocity.y;
             this.velocity.x = initVelocity.x;
@@ -111,8 +134,9 @@ class Faller extends WaveEnemy{
 }
 
 class Slinger extends WaveEnemy{
-    constructor(position,size,speed,img,health,cash){
+    constructor(position,size,speed,img,health,cash,counts=true){
         super(position,size,speed,img,health,cash);
+        this.counts = counts;
         this.startBehavior = function(){};
         this.behavior = function(){
             if(this.position.x > player.position.x){
@@ -134,14 +158,104 @@ class Slinger extends WaveEnemy{
     }
 }
 
+// wave 1
+{
 new Wave(
     [
-        'delay',
+        'repeatDelayContinue',
         1000,
-        new BasicEnemy(new Position(800,0),new Size(50,50),5,null,5,1),
+        10,
+        new Slinger(new Position(800,0),new Size(25,25),0.2,null,2,1)
+    ],
+    [
+        'repeatDelay',
+        100,
+        5,
+        new Faller(new Position(0,0),new Size(50,50),0.2,null,25,10,'down',new Vector(10,0),false),
+        new Faller(new Position(1600,0),new Size(50,50),0.2,null,25,10,'down',new Vector(-10,0),false)
+    ],
+    [
+        'repeatDelayContinue',
+        10,
+        10,
+        new Looper(new Position(1600,0),new Size(50,50),10,null,5,1,true,true),
+        new Looper(new Position(0,0),new Size(50,50),10,null,5,1,true,true)
+    ],
+    [
+        'delay',
+        5000,
+    ],
+    [
+        'conditional',
+        function(){return enemyTracker.enemiesAlive <= 20}
+    ],
+    [
+        'repeatDelayContinue',
+        2000,
+        5,
+        new Faller(new Position(400,900),new Size(50,50),0.2,null,50,25,'down',new Vector(0,-15)),
+        50,
+        new Faller(new Position(800,900),new Size(50,50),0.2,null,50,25,'down',new Vector(0,-15)),
+        50,
+        new Faller(new Position(1200,900),new Size(50,50),0.2,null,50,25,'down',new Vector(0,-15)),
     ]
 )
+}
 
+// wave 2
+{
+    new Wave(
+        [
+            'repeatDelayContinue',
+            200,
+            10,
+            new Swinger(new Position(800,0),new Size(50,50),10,null,5,1,'x',new Vector(0,10),true),
+            new Swinger(new Position(400,0),new Size(50,50),10,null,5,1,'x',new Vector(0,10),true),
+            new Swinger(new Position(1200,0),new Size(50,50),10,null,5,1,'x',new Vector(0,10),true)
+        ],
+        [
+            'repeatDelayContinue',
+            200,
+            10,
+            new Swinger(new Position(800,900),new Size(50,50),10,null,5,1,'x',new Vector(0,-10),true),
+            new Swinger(new Position(400,900),new Size(50,50),10,null,5,1,'x',new Vector(0,-10),true),
+            new Swinger(new Position(1200,900),new Size(50,50),10,null,5,1,'x',new Vector(0,-10),true)
+        ],
+        [
+            'repeatDelayContinue',
+            1000,
+            2,
+            new BasicEnemy(new Position(0,450),new Size(100,100),2,null,15,5)
+        ],
+        [
+            'delay',
+            500
+        ],
+        [
+            'repeatDelay',
+            1000,
+            2,
+            new BasicEnemy(new Position(1600,450),new Size(100,100),2,null,15,5)
+        ],
+        [
+            'conditional',
+            () => enemyTracker.enemiesAlive <= 4
+        ],
+        [
+            'repeatDelay',
+            1000,
+            5,
+            new Swinger(new Position(800,0),new Size(50,50),10,null,5,1,'x',new Vector(0,5),true),
+            new Swinger(new Position(400,0),new Size(50,50),10,null,5,1,'x',new Vector(0,5),true),
+            new Swinger(new Position(1200,0),new Size(50,50),10,null,5,1,'x',new Vector(0,5),true)
+        ]
+    )
+}
+
+// new Wave()
+
+//boss 1
+{
 new BossWave(
     [
         'delay',
@@ -151,15 +265,15 @@ new BossWave(
         'repeatDelayContinue',
         10,
         20,
-        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false,true),
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,true,true),
         10,
-        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false,false),
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,true,false),
         10,
-        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false,false),
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,true,false),
         10,
-        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false,false),
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,true,false),
         10,
-        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,false,false),
+        new Looper(new Position(400,0),new Size(50,50),10,null,5,1,true,false),
     ],
     [
         'repeatDelayContinue',
@@ -207,3 +321,4 @@ new BossWave(
         new Faller(new Position(1280,900),new Size(50,50),0.5,null,200,50,'down',new Vector(0,-20),false),
     ],
 )
+}
