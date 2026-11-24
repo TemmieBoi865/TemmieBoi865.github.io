@@ -35,7 +35,7 @@ function playerMovement(player){
     if(keysDown.has('f')){
         player.doAbility();
     }
-    if(keysDown.has('w') || keysDown.has('ArrowUp'){
+    if(keysDown.has('w') || keysDown.has('ArrowUp')){
         player.velocity.y = -player.speed;
         if(keysDown.has('d') || keysDown.has('ArrowRight')){
             player.velocity.normalize(player.speed,-45);
