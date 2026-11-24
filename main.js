@@ -70,32 +70,6 @@ function playerMovement(player){
     else{
         player.velocity.x = 0;
     }
-
-    if(keysDown.has('ArrowUp')){
-        player.fireShot();
-        mouse.position = new Position(player.position.x,player.position.y-9999999);
-        if(keysDown.has('ArrowRight')){
-            mouse.position = new Position(player.position.x+9999999,player.position.y-9999999);
-        }else if(keysDown.has('ArrowLeft')){
-            mouse.position = new Position(player.position.x-9999999,player.position.y-9999999);
-        }
-    }else if(keysDown.has('ArrowDown')){
-        player.fireShot();
-        mouse.position = new Position(player.position.x,player.position.y+9999999);
-        if(keysDown.has('ArrowRight')){
-            mouse.position = new Position(player.position.x+9999999,player.position.y+9999999);
-        }else if(keysDown.has('ArrowLeft')){
-            mouse.position = new Position(player.position.x-9999999,player.position.y+9999999);
-        }
-    }else{
-        if(keysDown.has('ArrowRight')){
-            player.fireShot();
-            mouse.position = new Position(player.position.x+9999999,player.position.y);
-        }else if(keysDown.has('ArrowLeft')){
-            player.fireShot();
-            mouse.position = new Position(player.position.x-9999999,player.position.y);
-        }
-    }
 }
 
 function getAngle(target1,target2){
@@ -185,8 +159,8 @@ class Enemy{
         this.speed = speed;
         this.velocity = new Vector();
         this.img = img;
-        this.health = health;
-        this.cash = cash;
+        this.health = Math.round(health * (waveTracker.wave/10 + 1));
+        this.cash = Math.round(cash * (waveTracker.wave/20 + 1));
         this.startBehavior = startBehavior;
         this.time = 0;
         this.alive = true;
@@ -292,6 +266,8 @@ class Player{
         this.speed = speed;
         this.rotation = 0;
 
+        this.upgrades = new Set();
+
         this.shotCD = 100;
         this.spread = 0;
         this.canShoot = true;
@@ -387,11 +363,27 @@ class Bullet{
         }
     }
     move(){
+        
         this.position.x += this.velocity.x;
         this.position.y += this.velocity.y;
-
         if(this.position.x < -50 || this.position.x > 1650 || this.position.y < -50 || this.position.y > 950){
             this.delete();
+        }
+        if(player.upgrades.has('Tracking Bullets') && this.tags == 'player'){
+            if(enemyTracker.enemiesList.length == 0){
+                return;
+            }
+            let enemy = null
+            let temp = 9999999999;
+            for(let i = 0; i < enemyTracker.enemiesList.length; i++){
+                if(temp > getDistance(this,enemyTracker.enemiesList[i])){
+                    temp = getDistance(this,enemyTracker.enemiesList[i]);
+                    enemy = enemyTracker.enemiesList[i];
+                }
+            }
+            // Canvas.fillText(JSON.stringify(enemy),200,200,999,'black');
+            this.direction = getAngle(this,enemy);
+            this.velocity.normalize(20,this.direction);
         }
     }
     draw(){
@@ -542,7 +534,7 @@ class Wave{
 class BossWave{
     constructor(...miniWave){
         this.miniWaves = miniWave;
-        this.miniWaves.push(['conditional',5000,function(){return enemyTracker.enemiesAlive == 0}])
+        this.miniWaves.push(['conditional',function(){return enemyTracker.enemiesAlive == 0}])
         this.stage = 0;
         this.spawning = false;
         this.repeat = 0;
@@ -576,6 +568,7 @@ class BossWave{
                 }
                 wave[i1].spawn();
             }
+            await wait(1000);
             this.spawning = false;
             this.stage++;
         }
@@ -595,6 +588,7 @@ class BossWave{
                     wave[i1].spawn();
                 }
             }
+            await wait(1000);
             this.spawning = false;
             this.stage++;
         }
@@ -647,7 +641,7 @@ class WaveTracker{
             this.wave++;
             if(this.wave%10 != 0){
                 this.waveIndex = Math.floor(Math.random()*this.waves.length-0.001);
-                this.waveIndex = 0;
+                // this.waveIndex = 1;
                 this.currentWave = this.waves[this.waveIndex];
                 this.waveRunning = true;
             }else{
@@ -667,10 +661,11 @@ class WaveTracker{
 }
 
 class Upgrade{
-    constructor(name,cost,func = function(){},...description){
+    constructor(name,cost,func = function(){},conditional = function(){return true},...description){
         this.name = name;
         this.cost = cost;
         this.func = func;
+        this.conditional = conditional;
         this.description = description;
     }
     buy(){
@@ -680,12 +675,14 @@ class Upgrade{
 class RogueLikeManager{
     constructor(){
         this.upgrades = [
-            new Upgrade('Speed', 10, function(){player.speed += 1},'Increases Speed By 1'),
-            new Upgrade('Spray Gun',20,function(){player.shotCD -= 10; player.spread += 5},'-10ms Shot CD','+5 Bullet Spread'),
-            new Upgrade('Health',5,function(){player.health += 2},'Increases Health by +2'),
-            new Upgrade('Damage',20,function(){player.damage += 1},'Increases Damage By 1'),
-            new Upgrade('Focus Shot',25,function(){player.damage += 1; player.spread -= 10; if(player.spread < 0){player.spread = 0} player.shotCD += 5},'More Damage, Less Spread','Longer Shot CD')
+            new Upgrade('Speed', 10, function(){player.speed += 1},function(){return true},'Gradually gets the zoomies*'),
+            new Upgrade('Spray Gun',20,function(){player.shotCD -= 10; player.spread += 5},function(){return true},'Pew Pew'),
+            new Upgrade('Health',5,function(){player.health += 2},function(){return true},'PLEASE I NEED','HEALTH T-T'),
+            new Upgrade('Damage',20,function(){player.damage += 1},function(){return true},'More damage'),
+            new Upgrade('Focus Shot',25,function(){player.damage += 1; player.spread -= 10; if(player.spread < 0){player.spread = 0} player.shotCD += 5},function(){return true},'Your bullets need to','Lock in'),
+            new Upgrade('Tracking Bullets',100,function(){},function(){return !player.upgrades.has('Tracking Bullets')},'Makes bullets racist','toward enemies')
         ];
+        this.upgradeList = [];
         this.presentedUpgrades = [];
         this.shop = false;
         this.priceMult = 1;
@@ -694,8 +691,10 @@ class RogueLikeManager{
         if(player.money >= Math.round(this.presentedUpgrades[i].cost*this.priceMult)){
             player.money -= Math.round(this.presentedUpgrades[i].cost*this.priceMult);
             this.presentedUpgrades[i].func();
+            player.upgrades.add(this.presentedUpgrades[i].name);
+            this.upgradeList.push(this.presentedUpgrades[i]);
             this.rerollUgrade(i);
-            this.priceMult += 0.2;
+            this.priceMult += 0.1;
         }
     }
     leaveShop(){
@@ -752,14 +751,26 @@ class RogueLikeManager{
     }
     spawnUpgrades(){
         this.presentedUpgrades = [];
-        for(let i = 0; i < 3; i++){
-            let f = Math.floor(Math.random()*this.upgrades.length-0.001);
+        this.upgradeList = [];
+        for(let i = 0; i < this.upgrades.length; i++){
+            this.upgradeList.push(this.upgrades[i]);
+        }
+        let e = 3;
+        for(let i = 0; i < e; i++){
+            let f = Math.floor(Math.random()*this.upgradeList.length-0.001);
             // f = 0;
-            this.presentedUpgrades.push(this.upgrades[f])
+            if(this.upgradeList[f].conditional()){
+                this.presentedUpgrades.push(this.upgradeList[f])
+                this.upgradeList.splice(f,1);
+            }else{
+                e++;
+            }
         }
     }
     rerollUgrade(index){
-        this.presentedUpgrades[index] = this.upgrades[Math.floor(Math.random()*this.upgrades.length-0.001)];
+        let r = Math.random();
+        this.presentedUpgrades[index] = this.upgradeList[Math.floor(r*this.upgradeList.length-0.001)];
+        this.upgradeList.splice(Math.floor(r*this.upgradeList.length-0.001),1)
     }
 }
 
