@@ -35,24 +35,24 @@ function playerMovement(player){
     if(keysDown.has('f')){
         player.doAbility();
     }
-    if(keysDown.has('w')){
+    if(keysDown.has('w') || keysDown.has('ArrowUp'){
         player.velocity.y = -player.speed;
-        if(keysDown.has('d')){
+        if(keysDown.has('d') || keysDown.has('ArrowRight')){
             player.velocity.normalize(player.speed,-45);
             return;
         }
-        if(keysDown.has('a')){
+        if(keysDown.has('a') || keysDown.has('ArrowLeft')){
             player.velocity.normalize(player.speed,-135);
             return;
         }
     }
-    else if(keysDown.has('s')){
+    else if(keysDown.has('s') || keysDown.has('ArrowDown')){
         player.velocity.y = player.speed;
-        if(keysDown.has('d')){
+        if(keysDown.has('d') || keysDown.has('ArrowRight')){
             player.velocity.normalize(player.speed,45);
             return;
         }
-        if(keysDown.has('a')){
+        if(keysDown.has('a') || keysDown.has('ArrowLeft')){
             player.velocity.normalize(player.speed,135);
             return;
         }
@@ -61,10 +61,10 @@ function playerMovement(player){
         player.velocity.y = 0;
     }
 
-    if(keysDown.has('d')){
+    if(keysDown.has('d') || keysDown.has('ArrowRight')){
         player.velocity.x = player.speed;
     }
-    else if(keysDown.has('a')){
+    else if(keysDown.has('a') || keysDown.has('ArrowLeft')){
         player.velocity.x = -player.speed;
     }
     else{
