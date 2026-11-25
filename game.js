@@ -26,7 +26,6 @@ async function start(){
             rogueLikeManager.draw();
         }
         warningTracker.drawAll();
-        // Canvas.fillTesxt(,200,200,99900,'black');
         drawGameScreen();
     },16.6);
     setInterval(function(){
@@ -164,8 +163,8 @@ new Wave(
     [
         'repeatDelayContinue',
         1000,
-        4,
-        new Slinger(new Position(800,0),new Size(25,25),0.2,null,2,1)
+        6,
+        new Slinger(new Position(800,0),new Size(40,40),0.2,null,2,1)
     ],
     [
         'repeatDelay',
@@ -178,8 +177,8 @@ new Wave(
         'repeatDelayContinue',
         10,
         10,
-        new Looper(new Position(1600,0),new Size(50,50),10,null,5,1,true,true),
-        new Looper(new Position(0,0),new Size(50,50),10,null,5,1,true,true)
+        new Looper(new Position(1600,0),new Size(50,50),10,null,1,1,true,true),
+        new Looper(new Position(0,0),new Size(50,50),10,null,1,1,true,true)
     ],
     [
         'delay',
@@ -252,7 +251,13 @@ new Wave(
     )
 }
 
-// new Wave()
+// new Wave(
+//     [
+//         'delay',
+//         100,
+//         new BasicEnemy(new Position(800,450),new Size(50,50),0,null,10000,1)
+//     ]
+// )
 
 //boss 1
 {
