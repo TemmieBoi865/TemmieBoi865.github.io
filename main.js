@@ -35,24 +35,24 @@ function playerMovement(player){
     if(keysDown.has('f')){
         player.doAbility();
     }
-    if(keysDown.has('w') || keysDown.has('ArrowUp')){
+    if(keysDown.has('w')){
         player.velocity.y = -player.speed;
-        if(keysDown.has('d') || keysDown.has('ArrowRight')){
+        if(keysDown.has('d')){
             player.velocity.normalize(player.speed,-45);
             return;
         }
-        if(keysDown.has('a') || keysDown.has('ArrowLeft')){
+        if(keysDown.has('a')){
             player.velocity.normalize(player.speed,-135);
             return;
         }
     }
-    else if(keysDown.has('s') || keysDown.has('ArrowDown')){
+    else if(keysDown.has('s')){
         player.velocity.y = player.speed;
-        if(keysDown.has('d') || keysDown.has('ArrowRight')){
+        if(keysDown.has('d')){
             player.velocity.normalize(player.speed,45);
             return;
         }
-        if(keysDown.has('a') || keysDown.has('ArrowLeft')){
+        if(keysDown.has('a')){
             player.velocity.normalize(player.speed,135);
             return;
         }
@@ -61,10 +61,10 @@ function playerMovement(player){
         player.velocity.y = 0;
     }
 
-    if(keysDown.has('d') || keysDown.has('ArrowRight')){
+    if(keysDown.has('d')){
         player.velocity.x = player.speed;
     }
-    else if(keysDown.has('a') || keysDown.has('ArrowLeft')){
+    else if(keysDown.has('a')){
         player.velocity.x = -player.speed;
     }
     else{
@@ -79,6 +79,14 @@ function getAngle(target1,target2){
     if(target2.position.x-target1.position.x < 0){
         return 180+toDeg(Math.atan((target2.position.y-target1.position.y)/(target2.position.x-target1.position.x)));
     }
+}
+
+async function drawExplosion(position,radius){
+    let id = setInterval(() => {
+        Canvas.fillCircle(position.x,position.y,radius,'red');
+    },5);
+    await wait(20);
+    clearInterval(id);
 }
 
 class Position{
@@ -174,11 +182,25 @@ class Enemy{
             for(let i = 0; i < bulletTracker.bullets.length; i++){
                 try{
                     let bullet = bulletTracker.bullets[i];
-                    if((bullet.position.x + bullet.size.w/2) >= (this.position.x-this.size.w/2) && (bullet.position.x-bullet.size.w/2) <= (this.position.x+this.size.w/2) && (bullet.position.y + bullet.size.h/2) >= (this.position.y - this.size.h/2) && (bullet.position.y-bullet.size.h/2) <= (this.position.y+this.size.h/2) && bullet.exists && bullet.tags == 'player'){
-                        bullet.delete();
-                        this.health-=player.damage;
-                        if(this.health <= 0){
-                            player.money+=this.cash;
+                    if(bullet.delay <= 0){
+                        if((bullet.position.x + bullet.size.w/2) >= (this.position.x-this.size.w/2) && (bullet.position.x-bullet.size.w/2) <= (this.position.x+this.size.w/2) && (bullet.position.y + bullet.size.h/2) >= (this.position.y - this.size.h/2) && (bullet.position.y-bullet.size.h/2) <= (this.position.y+this.size.h/2) && bullet.exists && bullet.tags == 'player'){
+                            bullet.pierce--;
+                            bullet.delay = 5;
+                            if(bullet.pierce <= 0){
+                                bullet.delete();
+                            }
+                            if(player.upgrades.has('Mines')){
+                                drawExplosion(bullet.position,player.explosionRadius);
+                                for(let i = 0; i < enemyTracker.enemiesList.length; i++){
+                                    if(getDistance(bullet,enemyTracker.enemiesList[i]) <= player.explosionRadius + 100){
+                                        enemyTracker.enemiesList[i].health -= player.damage*player.damageMult;
+                                    }
+                                }
+                            }
+                            this.health -= player.damage*player.damageMult;
+                            if(this.health <= 0){
+                                player.money+=this.cash;
+                            }
                         }
                     }
                 }
@@ -268,10 +290,17 @@ class Player{
 
         this.upgrades = new Set();
 
-        this.shotCD = 100;
+        this.shotCD = 200;
         this.spread = 0;
         this.canShoot = true;
         this.damage = 1;
+        this.damageMult = 1;
+        this.bulletSize = new Size(50,5);
+        this.bulletDecay = -1;
+        this.bulletPierce = 1;
+        this.bulletSpeed = 20;
+
+        this.explosionRadius = 50;
 
         this.menu = false;
 
@@ -292,7 +321,7 @@ class Player{
             return;
         }
         if(this.canShoot){
-            new Bullet(new Position(this.position.x,this.position.y),25,new Size(50,5),this.rotation + (Math.random()-0.5)*this.spread,'player');
+            new Bullet(new Position(this.position.x,this.position.y),25,this.bulletSize,this.rotation + (Math.random()-0.5)*this.spread,'player');
             this.canShoot = false;
             await wait(this.shotCD);
             this.canShoot = true;
@@ -349,6 +378,17 @@ class Bullet{
         this.properties = new Set();
         this.tags = tag;
         this.exists = true;
+        this.decay = player.bulletDecay;
+        this.pierce = player.bulletPierce;
+        this.delay = 0;
+        this.time = 0;
+        if(this.tags == 'enemy'){
+            this.decay = -1;
+            this.pierce = 1;
+        }
+        if(this.tags == 'player'){
+            this.velocity.normalize(player.bulletSpeed,direction);
+        }
         bulletTracker.bullets.push(this);
         bulletTracker.count++;
     }
@@ -363,27 +403,38 @@ class Bullet{
         }
     }
     move(){
-        
+        this.time++;
+        this.delay--;
         this.position.x += this.velocity.x;
         this.position.y += this.velocity.y;
         if(this.position.x < -50 || this.position.x > 1650 || this.position.y < -50 || this.position.y > 950){
             this.delete();
         }
         if(player.upgrades.has('Tracking Bullets') && this.tags == 'player'){
-            if(enemyTracker.enemiesList.length == 0){
+            if(enemyTracker.enemiesList.length <= 0){
                 return;
             }
-            let enemy = null
-            let temp = 9999999999;
+            let enemy = enemyTracker.enemiesList[0];
+            let temp = 99999;
             for(let i = 0; i < enemyTracker.enemiesList.length; i++){
-                if(temp > getDistance(this,enemyTracker.enemiesList[i])){
+                if(getDistance(this,enemyTracker.enemiesList[i]) < temp){
                     temp = getDistance(this,enemyTracker.enemiesList[i]);
                     enemy = enemyTracker.enemiesList[i];
                 }
             }
-            // Canvas.fillText(JSON.stringify(enemy),200,200,999,'black');
             this.direction = getAngle(this,enemy);
             this.velocity.normalize(20,this.direction);
+        }
+        if(player.upgrades.has('Spinning Bullets') && this.tags == 'player'){
+            this.direction += 5;
+            this.velocity.normalize(player.bulletSpeed,this.direction);
+        }
+        if(player.upgrades.has('Mines') && this.tags == 'player'){
+            this.direction += 1;
+        }
+        this.decay --;
+        if(this.decay == 0){
+            this.delete();
         }
     }
     draw(){
@@ -504,14 +555,19 @@ class Wave{
             for(let i2 = 0; i2 < wave[2]; i2++){
                 await wait(wave[1])
                 for(let i1 = 3; i1 < wave.length; i1++){
-                    if(typeof(wave[i1]) == 'number' || player.menu == true){
+                    if(typeof(wave[i1]) == 'number'){
                         await wait(wave[i1]);
                         continue;
+                    }
+                    if(player.menu == true){
+                        i1++;
                     }
                     if(rogueLikeManager.shop == true){
                         return;
                     }
-                    wave[i1].spawn();
+                    if(player.menu == false){
+                        wave[i1].spawn();
+                    }
                 }
             }
             // this.spawning = false;
@@ -599,14 +655,19 @@ class BossWave{
             for(let i2 = 0; i2 < wave[2]; i2++){
                 await wait(wave[1])
                 for(let i1 = 3; i1 < wave.length; i1++){
-                    if(typeof(wave[i1]) == 'number' || player.menu == true){
+                    if(typeof(wave[i1]) == 'number'){
                         await wait(wave[i1]);
                         continue;
+                    }
+                    if(player.menu == true){
+                        i1++;
                     }
                     if(rogueLikeManager.shop == true){
                         return;
                     }
-                    wave[i1].spawn();
+                    if(player.menu == false){
+                        wave[i1].spawn();
+                    }
                 }
             }
             // this.spawning = false;
@@ -675,12 +736,107 @@ class Upgrade{
 class RogueLikeManager{
     constructor(){
         this.upgrades = [
-            new Upgrade('Speed', 10, function(){player.speed += 1},function(){return true},'Gradually gets the zoomies*'),
-            new Upgrade('Spray Gun',20,function(){player.shotCD -= 10; player.spread += 5},function(){return true},'Pew Pew'),
-            new Upgrade('Health',5,function(){player.health += 2},function(){return true},'PLEASE I NEED','HEALTH T-T'),
-            new Upgrade('Damage',20,function(){player.damage += 1},function(){return true},'More damage'),
-            new Upgrade('Focus Shot',25,function(){player.damage += 1; player.spread -= 10; if(player.spread < 0){player.spread = 0} player.shotCD += 5},function(){return true},'Your bullets need to','Lock in'),
-            new Upgrade('Tracking Bullets',100,function(){},function(){return !player.upgrades.has('Tracking Bullets')},'Makes bullets racist','toward enemies')
+
+
+            new Upgrade('Speed', 10, function(){
+                player.speed += 1
+            },function(){
+                return true
+            },'Gradually gets the zoomies*','+1 Speed'),
+
+
+            new Upgrade('Spray Gun',20,function(){
+                player.shotCD -= 20;
+                player.spread += 5
+            },function(){
+                return !player.upgrades.has('Mines')
+            },'Pew Pew','-10 shot CD','+5 bullet spread'),
+
+
+            new Upgrade('Health',5,function(){
+                player.health += 2
+            },function(){
+                return true
+            },'PLEASE I NEED','HEALTH T-T','+2 Health'),
+
+
+            new Upgrade('Damage',20,function(){
+                player.damage += 1
+            },function(){
+                return true
+            },'More damage','+1 Damage'),
+
+
+            new Upgrade('Focus Shot',25,function(){
+                player.damage += 1; 
+                player.spread -= 10; 
+                if(player.spread < 0){
+                    player.spread = 0
+                }
+                player.shotCD += 5;
+                },function(){
+                    return !player.upgrades.has('Mines')
+                },'Your bullets need to','Lock in','+5 shot CD','+1 Damage','-5 bullet spread'),
+
+
+            new Upgrade('Spinning Bullets',20,function(){
+                player.bulletDecay = 400
+            },function(){return !player.upgrades.has('Spinning Bullets') && !player.upgrades.has('Mines') && !player.upgrades.has('Tracking Bullets')},'Makes bullets dumb','Makes bullets spin','in circles'),
+
+
+            new Upgrade('Spin Longer',25,function(){
+                player.bulletDecay += 50
+            },function(){return player.upgrades.has('Spinning Bullets') && !player.upgrades.has('Tracking Bullets')},'Bullets Spin Longer'),
+
+
+            new Upgrade('Tracking Bullets',200,function(){
+                player.upgrades.delete('Spinning Bullets'); 
+                player.bulletDecay += 1000;
+            },() => player.upgrades.has('Spinning Bullets') && !player.upgrades.has('Tracking Bullets'),'They track enemies'),
+
+
+            new Upgrade('Fly Longer',25,function(){
+                player.bulletDecay += 50
+            },function(){return player.upgrades.has('Tracking Bullets')},'Bullets Fly Longer'),
+
+
+            new Upgrade('Piercing Bullet',50,function(){
+                player.bulletPierce += 1
+            },function(){return true},'Bullet phasing','+1 Bullet Pierce'),
+
+
+            new Upgrade('Mines',25,function(){
+                player.bulletSpeed = 0; 
+                player.damage += 25; 
+                player.bulletSize = new Size(25,25); 
+                player.shotCD += 1500; 
+                player.damageMult += 1;
+            },function(){
+                return (!player.upgrades.has('Spinning Bullets') && !player.upgrades.has('Mines'))
+            },'Lays mines instead','of shooting bullets','Lots more dmg'),
+
+
+            new Upgrade('Bigger Mines',30,function(){
+                player.bulletSize.w += 5; 
+                player.bulletSize.h += 5;
+            },function(){
+                return player.upgrades.has('Mines')
+            },'Larger Mines'),
+
+
+            new Upgrade('Faster Placement',50,function(){
+                player.shotCD -= 50;
+            },function(){
+                return player.upgrades.has('Mines')
+            },'Faster placment of mines','-100 shot CD'),
+
+            
+            new Upgrade('Larger Explosion',50,function(){
+                player.explosionRadius += 15;
+            },function(){
+                return player.upgrades.has('Mines')
+            },'+10 Explosion Radius'),
+
         ];
         this.upgradeList = [];
         this.presentedUpgrades = [];
@@ -693,8 +849,8 @@ class RogueLikeManager{
             this.presentedUpgrades[i].func();
             player.upgrades.add(this.presentedUpgrades[i].name);
             this.upgradeList.push(this.presentedUpgrades[i]);
-            this.rerollUgrade(i);
-            this.priceMult += 0.1;
+            this.presentedUpgrades[i] = new Upgrade('Bought!',0,function(){rogueLikeManager.priceMult-=0.2},false,'Item Bought!');
+            this.priceMult += 0.2;
         }
     }
     leaveShop(){
@@ -766,11 +922,6 @@ class RogueLikeManager{
                 e++;
             }
         }
-    }
-    rerollUgrade(index){
-        let r = Math.random();
-        this.presentedUpgrades[index] = this.upgradeList[Math.floor(r*this.upgradeList.length-0.001)];
-        this.upgradeList.splice(Math.floor(r*this.upgradeList.length-0.001),1)
     }
 }
 
