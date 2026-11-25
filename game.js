@@ -164,7 +164,7 @@ new Wave(
     [
         'repeatDelayContinue',
         1000,
-        10,
+        4,
         new Slinger(new Position(800,0),new Size(25,25),0.2,null,2,1)
     ],
     [
