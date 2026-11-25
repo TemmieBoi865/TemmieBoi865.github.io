@@ -812,7 +812,7 @@ class RogueLikeManager{
                 player.shotCD += 1500; 
                 player.damageMult += 1;
             },function(){
-                return (!player.upgrades.has('Spinning Bullets') && !player.upgrades.has('Mines'))
+                return (!player.upgrades.has('Spinning Bullets') && !player.upgrades.has('Mines') && !player.upgrades.has('Tracking Bullets'))
             },'Lays mines instead','of shooting bullets','Lots more dmg'),
 
 
